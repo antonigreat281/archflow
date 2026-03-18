@@ -17,6 +17,10 @@ build/
 # WASM build output
 docs/pkg/
 
+# Node
+node_modules/
+*.vsix
+
 # IDE
 .vscode/
 .idea/
