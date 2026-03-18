@@ -1,3 +1,4 @@
+pub mod dsl;
 pub mod error;
 pub mod layout;
 pub mod model;
@@ -8,6 +9,27 @@ pub mod theme;
 use error::ArchflowError;
 use model::DiagramIR;
 use theme::Theme;
+
+/// Parse a DSL string into a DiagramIR.
+pub fn parse_dsl(dsl: &str) -> Result<DiagramIR, ArchflowError> {
+    dsl::parse_dsl(dsl)
+}
+
+/// Parse a DSL string and return IR as JSON.
+pub fn parse_dsl_to_json(dsl: &str) -> Result<String, ArchflowError> {
+    let ir = dsl::parse_dsl(dsl)?;
+    serde_json::to_string(&ir).map_err(|e| ArchflowError::InvalidJson(e.to_string()))
+}
+
+/// Parse a DSL string and render directly to SVG.
+pub fn render_dsl(dsl: &str) -> Result<String, ArchflowError> {
+    let ir = dsl::parse_dsl(dsl)?;
+    validate(&ir)?;
+    let layout = layout::compute_layout(&ir)?;
+    let theme = Theme::from_ir(&ir.metadata.theme, &ir.metadata.custom_theme);
+    let scene = scene::build_scene(&layout, &ir, &theme);
+    Ok(render::render_svg(&scene))
+}
 
 /// Render a diagram IR JSON string to an SVG string.
 pub fn render_svg(json_ir: &str) -> Result<String, ArchflowError> {

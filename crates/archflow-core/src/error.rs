@@ -13,6 +13,9 @@ pub enum ArchflowError {
 
     #[error("Render error: {0}")]
     RenderError(String),
+
+    #[error("DSL parse error at line {line}: {message}")]
+    ParseError { line: usize, message: String },
 }
 
 impl From<serde_json::Error> for ArchflowError {
