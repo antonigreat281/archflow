@@ -3,6 +3,7 @@ pub mod error;
 pub mod layout;
 pub mod model;
 pub mod render;
+pub mod resolver;
 pub mod scene;
 pub mod theme;
 
