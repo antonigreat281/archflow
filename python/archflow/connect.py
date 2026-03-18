@@ -1,7 +1,7 @@
 """Convenience function for connecting nodes."""
 
-from archflow.edge import Edge
 from archflow._context import get_current_diagram
+from archflow.edge import Edge
 
 
 def connect(*nodes, label: str = None):

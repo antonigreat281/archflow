@@ -7,9 +7,7 @@ from archflow._context import set_current_diagram
 
 
 class Diagram:
-    def __init__(
-        self, title: str = "Untitled", *, direction: str = "TB", theme: str = "default"
-    ):
+    def __init__(self, title: str = "Untitled", *, direction: str = "TB", theme: str = "default"):
         self.title = title
         self.direction = direction
         self.theme = theme
@@ -62,8 +60,8 @@ class Diagram:
 
     def _render_via_cli(self) -> str:
         """Fallback renderer using the CLI binary."""
-        import tempfile
         import os
+        import tempfile
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write(self.to_json())

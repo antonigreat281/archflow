@@ -1,6 +1,6 @@
 """기본 웹 서비스 아키텍처."""
 
-from archflow import Diagram, Node, Cluster
+from archflow import Cluster, Diagram, Node
 
 with Diagram("Web Service Architecture", direction="LR") as d:
     client = Node("client", "Client")

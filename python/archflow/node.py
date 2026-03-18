@@ -1,6 +1,6 @@
 """Node definition for Archflow diagrams."""
 
-from archflow._context import get_current_diagram, get_current_cluster
+from archflow._context import get_current_cluster, get_current_diagram
 
 
 class Node:
@@ -31,8 +31,8 @@ class Node:
 
     def __rshift__(self, other):
         """a >> b creates an edge from a to b and returns b for chaining."""
-        from archflow.edge import Edge
         from archflow._context import get_current_diagram
+        from archflow.edge import Edge
 
         if isinstance(other, Node):
             edge = Edge(self, other)

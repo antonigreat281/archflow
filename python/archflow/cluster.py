@@ -1,6 +1,6 @@
 """Cluster definition for Archflow diagrams."""
 
-from archflow._context import get_current_diagram, push_cluster, pop_cluster
+from archflow._context import get_current_diagram, pop_cluster, push_cluster
 
 
 class Cluster:

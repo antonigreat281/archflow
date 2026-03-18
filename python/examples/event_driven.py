@@ -1,6 +1,6 @@
 """이벤트 드리븐 아키텍처."""
 
-from archflow import Diagram, Node, Cluster, connect
+from archflow import Cluster, Diagram, Node, connect
 
 with Diagram("Event-Driven Architecture", direction="LR") as d:
     with Cluster("producers", "Event Producers"):

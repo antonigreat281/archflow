@@ -1,6 +1,6 @@
 """Basic Archflow example - Web Service architecture."""
 
-from archflow import Diagram, Node, Cluster
+from archflow import Cluster, Diagram, Node
 
 with Diagram("Web Service", direction="LR") as d:
     with Cluster("vpc", "VPC"):

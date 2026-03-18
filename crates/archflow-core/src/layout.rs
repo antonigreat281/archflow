@@ -5,10 +5,10 @@ use crate::model::DiagramIR;
 
 const NODE_WIDTH: f64 = 160.0;
 const NODE_HEIGHT: f64 = 60.0;
-const H_SPACING: f64 = 80.0;
-const V_SPACING: f64 = 100.0;
-const CLUSTER_PADDING: f64 = 40.0;
-const CLUSTER_LABEL_HEIGHT: f64 = 30.0;
+const H_SPACING: f64 = 120.0;
+const V_SPACING: f64 = 120.0;
+const CLUSTER_PADDING: f64 = 50.0;
+const CLUSTER_LABEL_HEIGHT: f64 = 36.0;
 
 #[derive(Debug, Clone)]
 pub struct LayoutNode {
