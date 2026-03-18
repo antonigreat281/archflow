@@ -98,46 +98,95 @@ export function initPlayground(wasmRenderSvg) {
   editor.setValue(examples[0].dsl);
 }
 
-// ─── Icon Resolution ───
-// Chain: 1. icon_svg set → 2. builtin → 3. cache → 4. central registry → 5. custom sources
+// ─── Icon & Style Resolution ───
+// Loads provider manifests, applies cluster_styles, resolves icon SVGs
 
-/**
- * Resolve icons for all nodes in the IR.
- * Browser has no local filesystem, so the chain is:
- *   1. icon_svg already set (or builtin from parser) → skip
- *   2. In-memory cache hit
- *   3. Central registry (DEFAULT_REGISTRY)
- *   4. Custom icon_sources
- */
+const manifestCache = new Map();
+
+async function fetchManifest(provider) {
+  const key = `${provider}/manifest`;
+  if (manifestCache.has(key)) return manifestCache.get(key);
+
+  const url = `${DEFAULT_REGISTRY}/${provider}/manifest.json`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) { manifestCache.set(key, null); return null; }
+    const manifest = await resp.json();
+    manifestCache.set(key, manifest);
+    return manifest;
+  } catch {
+    manifestCache.set(key, null);
+    return null;
+  }
+}
+
 async function resolveIcons(ir) {
   const sources = (ir.metadata && ir.metadata.icon_sources) || [];
 
-  // Build ordered URL list per node: central registry first, then custom sources
-  const resolveQueue = [];
+  // Collect providers
+  const providers = new Set();
+  for (const n of (ir.nodes || [])) if (n.provider) providers.add(n.provider);
+  for (const c of (ir.clusters || [])) if (c.provider) providers.add(c.provider);
 
+  // Load manifests in parallel
+  const manifests = {};
+  await Promise.all([...providers].map(async p => {
+    manifests[p] = await fetchManifest(p);
+  }));
+
+  // Apply cluster_styles from manifests
+  for (const cluster of (ir.clusters || [])) {
+    if (!cluster.provider || !cluster.cluster_type) continue;
+    if (cluster.style) continue; // don't override explicit style
+    const mf = manifests[cluster.provider];
+    const preset = mf && mf.cluster_styles && mf.cluster_styles[cluster.cluster_type];
+    if (preset) {
+      cluster.style = { ...preset };
+    }
+  }
+
+  // Apply node_render_modes from manifests
+  const renderModes = {};
+  for (const [p, mf] of Object.entries(manifests)) {
+    if (mf && mf.node_render_mode) renderModes[p] = mf.node_render_mode;
+  }
+  if (Object.keys(renderModes).length > 0) {
+    if (!ir.metadata) ir.metadata = {};
+    ir.metadata.node_render_modes = renderModes;
+  }
+
+  // Resolve node icons
+  const resolveQueue = [];
   for (const node of (ir.nodes || [])) {
     const provider = node.provider;
     const icon = node.icon;
     if (!provider || !icon) continue;
 
-    // Build candidate URLs in priority order
     const urls = [];
-
-    // Central registry (always first)
     urls.push(`${DEFAULT_REGISTRY}/${provider}/nodes/${icon}.svg`);
-
-    // Custom sources
     for (const source of sources) {
       const baseUrl = resolveSourceBase(source);
-      if (baseUrl) {
-        urls.push(`${baseUrl}/${provider}/nodes/${icon}.svg`);
-      }
+      if (baseUrl) urls.push(`${baseUrl}/${provider}/nodes/${icon}.svg`);
     }
-
     resolveQueue.push({ node, urls });
   }
 
-  // Resolve all nodes in parallel, each trying URLs in order
+  // Resolve cluster icons
+  for (const cluster of (ir.clusters || [])) {
+    const provider = cluster.provider;
+    const clusterType = cluster.cluster_type;
+    if (!provider || !clusterType) continue;
+
+    const urls = [];
+    urls.push(`${DEFAULT_REGISTRY}/${provider}/clusters/${clusterType}.svg`);
+    for (const source of sources) {
+      const baseUrl = resolveSourceBase(source);
+      if (baseUrl) urls.push(`${baseUrl}/${provider}/clusters/${clusterType}.svg`);
+    }
+    resolveQueue.push({ node: cluster, urls });
+  }
+
+  // Fetch all icons in parallel
   await Promise.allSettled(
     resolveQueue.map(({ node, urls }) => resolveNodeIcon(node, urls))
   );
@@ -345,9 +394,9 @@ async function render() {
 
   try {
     // Resolve icons — central registry is always available, no need for explicit icon_sources
-    // Always try to resolve: real icons override parser builtins
-    const hasProviderNodes = (ir.nodes || []).some(n => n.provider && n.icon);
-    if (hasProviderNodes) {
+    const hasProviderRefs = (ir.nodes || []).some(n => n.provider && n.icon)
+      || (ir.clusters || []).some(c => c.provider && c.cluster_type);
+    if (hasProviderRefs) {
       await resolveIcons(ir);
     }
 
