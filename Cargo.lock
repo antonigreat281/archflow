@@ -58,6 +58,7 @@ version = "0.1.0"
 dependencies = [
  "archflow-core",
  "clap",
+ "serde_json",
 ]
 
 [[package]]
