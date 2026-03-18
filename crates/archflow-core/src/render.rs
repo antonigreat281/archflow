@@ -20,10 +20,21 @@ fn render_element(buf: &mut String, element: &SceneElement, indent: usize) {
             fill,
             stroke,
             stroke_width,
+            shadow,
         } => {
+            let filter = if *shadow {
+                " filter=\"url(#shadow)\""
+            } else {
+                ""
+            };
+            let stroke_attr = if stroke == "none" {
+                String::new()
+            } else {
+                format!(" stroke=\"{stroke}\" stroke-width=\"{stroke_width}\"")
+            };
             buf.push_str(&format!(
                 "{pad}<rect x=\"{x}\" y=\"{y}\" width=\"{width}\" height=\"{height}\" \
-                 rx=\"{rx}\" fill=\"{fill}\" stroke=\"{stroke}\" stroke-width=\"{stroke_width}\"/>\n"
+                 rx=\"{rx}\" fill=\"{fill}\"{stroke_attr}{filter}/>\n"
             ));
         }
         SceneElement::Text {
@@ -34,29 +45,25 @@ fn render_element(buf: &mut String, element: &SceneElement, indent: usize) {
             font_family,
             fill,
             anchor,
+            font_weight,
         } => {
             buf.push_str(&format!(
                 "{pad}<text x=\"{x}\" y=\"{y}\" font-size=\"{font_size}\" \
-                 font-family=\"{font_family}\" fill=\"{fill}\" \
+                 font-family=\"{font_family}\" fill=\"{fill}\" font-weight=\"{font_weight}\" \
                  text-anchor=\"{anchor}\" dominant-baseline=\"middle\">{}</text>\n",
                 escape_xml(content)
             ));
         }
-        SceneElement::Line {
-            points,
+        SceneElement::Path {
+            d,
             stroke,
             stroke_width,
             stroke_dasharray,
             marker_end,
         } => {
-            let points_str: String = points
-                .iter()
-                .map(|(x, y)| format!("{x},{y}"))
-                .collect::<Vec<_>>()
-                .join(" ");
             let dash = stroke_dasharray
                 .as_ref()
-                .map(|d| format!(" stroke-dasharray=\"{d}\""))
+                .map(|da| format!(" stroke-dasharray=\"{da}\""))
                 .unwrap_or_default();
             let marker = if *marker_end {
                 " marker-end=\"url(#arrowhead)\""
@@ -64,8 +71,9 @@ fn render_element(buf: &mut String, element: &SceneElement, indent: usize) {
                 ""
             };
             buf.push_str(&format!(
-                "{pad}<polyline points=\"{points_str}\" fill=\"none\" \
-                 stroke=\"{stroke}\" stroke-width=\"{stroke_width}\"{dash}{marker}/>\n"
+                "{pad}<path d=\"{d}\" fill=\"none\" \
+                 stroke=\"{stroke}\" stroke-width=\"{stroke_width}\" \
+                 stroke-linecap=\"round\"{dash}{marker}/>\n"
             ));
         }
         SceneElement::Group { id, children } => {
@@ -79,7 +87,7 @@ fn render_element(buf: &mut String, element: &SceneElement, indent: usize) {
 }
 
 pub fn render_svg(scene: &SceneGraph) -> String {
-    let mut buf = String::with_capacity(4096);
+    let mut buf = String::with_capacity(8192);
 
     buf.push_str(&format!(
         r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {} {}" width="{}" height="{}">"##,
@@ -87,11 +95,14 @@ pub fn render_svg(scene: &SceneGraph) -> String {
     ));
     buf.push('\n');
 
-    // Defs: arrowhead marker
+    // Defs
     buf.push_str(
         r##"  <defs>
-    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#667085"/>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="116%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 L2,3 Z" fill="#959DA5"/>
     </marker>
   </defs>
 "##,
