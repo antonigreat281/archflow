@@ -1,8 +1,9 @@
 import { examples } from './examples.js';
-import { parseDSL } from './parser.js';
 
 let editor = null;
-let renderFn = null;
+let renderSvgFn = null;   // wasm.render_svg (JSON → SVG)
+let renderDslFn = null;   // wasm.render_dsl (DSL → SVG)
+let parseDslFn = null;    // wasm.parse_dsl (DSL → JSON)
 let renderTimeout = null;
 let mode = 'dsl'; // 'dsl' or 'json'
 
@@ -23,8 +24,10 @@ const DEFAULT_REGISTRY = (location.hostname === 'localhost' || location.hostname
   ? location.origin
   : 'https://raw.githubusercontent.com/soulee-dev/archflow-icons/main';
 
-export function initPlayground(wasmRenderSvg) {
-  renderFn = wasmRenderSvg;
+export function initPlayground(wasmModule) {
+  renderSvgFn = wasmModule.render_svg;
+  renderDslFn = wasmModule.render_dsl;
+  parseDslFn = wasmModule.parse_dsl;
 
   // Init CodeMirror
   const textarea = document.getElementById('editor-textarea');
@@ -353,7 +356,9 @@ function toggleMode() {
 
   if (mode === 'dsl') {
     try {
-      const ir = parseDSL(content);
+      // Use Rust parser to convert DSL → JSON
+      const json = parseDslFn(content);
+      const ir = JSON.parse(json);
       mode = 'json';
       editor.setOption('mode', 'application/json');
       editor.setValue(JSON.stringify(ir, null, 2));
@@ -378,32 +383,37 @@ function toggleMode() {
 // ─── Render ───
 
 async function render() {
-  if (!renderFn || !editor) return;
+  if (!renderSvgFn || !editor) return;
 
   const content = editor.getValue();
-  let ir;
 
   try {
+    let svg;
     if (mode === 'dsl') {
-      ir = parseDSL(content);
+      // Parse DSL → IR JSON via Rust, then resolve icons, then render
+      const irJson = parseDslFn(content);
+      const ir = JSON.parse(irJson);
+
+      // Apply theme from dropdown
+      const selectedTheme = document.getElementById('theme-select').value;
+      if (!ir.metadata) ir.metadata = {};
+      ir.metadata.theme = selectedTheme;
+
+      // Resolve icons for providers declared with "use"
+      await resolveIcons(ir);
+
+      svg = renderSvgFn(JSON.stringify(ir));
     } else {
-      ir = JSON.parse(content);
+      // JSON mode: parse, apply theme, resolve, render
+      const ir = JSON.parse(content);
+      const selectedTheme = document.getElementById('theme-select').value;
+      if (!ir.metadata) ir.metadata = {};
+      ir.metadata.theme = selectedTheme;
+
+      await resolveIcons(ir);
+      svg = renderSvgFn(JSON.stringify(ir));
     }
-    // Apply theme from dropdown
-    const selectedTheme = document.getElementById('theme-select').value;
-    if (!ir.metadata) ir.metadata = {};
-    ir.metadata.theme = selectedTheme;
-  } catch (e) {
-    setStatus('Parse error: ' + e.message, true);
-    return;
-  }
 
-  try {
-    // Resolve icons for providers declared with "use"
-    await resolveIcons(ir);
-
-    const jsonStr = JSON.stringify(ir);
-    const svg = renderFn(jsonStr);
     const preview = document.getElementById('svg-preview');
     preview.innerHTML = svg;
     setStatus('Ready', false);

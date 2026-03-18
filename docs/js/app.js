@@ -32,7 +32,7 @@ async function init() {
   try {
     const wasm = await import('../pkg/archflow_wasm.js');
     await wasm.default();
-    initPlayground(wasm.render_svg);
+    initPlayground(wasm);
   } catch (err) {
     console.error('WASM load failed:', err);
     if (statusEl) {
