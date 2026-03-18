@@ -14,7 +14,7 @@ pub fn render_svg(json_ir: &str) -> Result<String, ArchflowError> {
     let ir: DiagramIR = serde_json::from_str(json_ir)?;
     validate(&ir)?;
     let layout = layout::compute_layout(&ir)?;
-    let theme = Theme::default();
+    let theme = Theme::from_ir(&ir.metadata.theme, &ir.metadata.custom_theme);
     let scene = scene::build_scene(&layout, &ir, &theme);
     Ok(render::render_svg(&scene))
 }
@@ -109,6 +109,73 @@ mod tests {
             "edges": []
         }"#;
         assert!(render_svg(ir).is_err());
+    }
+
+    #[test]
+    fn test_dark_theme() {
+        let ir = r#"{
+            "version": "1.0.0",
+            "metadata": { "theme": "dark" },
+            "nodes": [
+                { "id": "a", "label": "A" },
+                { "id": "b", "label": "B" }
+            ],
+            "edges": [{ "from": "a", "to": "b" }]
+        }"#;
+        let svg = render_svg(ir).unwrap();
+        assert!(svg.contains("#1A1B26")); // dark background
+    }
+
+    #[test]
+    fn test_unknown_theme_falls_back() {
+        let ir = r#"{
+            "version": "1.0.0",
+            "metadata": { "theme": "nonexistent" },
+            "nodes": [{ "id": "a", "label": "A" }],
+            "edges": []
+        }"#;
+        let svg = render_svg(ir).unwrap();
+        assert!(svg.contains("#FAFBFC")); // default background
+    }
+
+    #[test]
+    fn test_custom_theme_override() {
+        let ir = r##"{
+            "version": "1.0.0",
+            "metadata": {
+                "theme": "default",
+                "custom_theme": {
+                    "background": "#FF0000",
+                    "node_palette": [
+                        { "fill": "#00FF00", "stroke": "#008800" }
+                    ],
+                    "node_shadow": false
+                }
+            },
+            "nodes": [{ "id": "a", "label": "A" }],
+            "edges": []
+        }"##;
+        let svg = render_svg(ir).unwrap();
+        assert!(svg.contains("#FF0000")); // custom background
+        assert!(svg.contains("#00FF00")); // custom node fill
+    }
+
+    #[test]
+    fn test_custom_theme_on_top_of_dark() {
+        let ir = r##"{
+            "version": "1.0.0",
+            "metadata": {
+                "theme": "dark",
+                "custom_theme": {
+                    "background": "#000000"
+                }
+            },
+            "nodes": [{ "id": "a", "label": "A" }],
+            "edges": []
+        }"##;
+        let svg = render_svg(ir).unwrap();
+        assert!(svg.contains("#000000")); // overridden background
+        assert!(svg.contains("#7AA2F7")); // dark palette still used
     }
 
     #[test]

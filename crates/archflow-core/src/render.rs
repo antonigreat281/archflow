@@ -96,17 +96,18 @@ pub fn render_svg(scene: &SceneGraph) -> String {
     buf.push('\n');
 
     // Defs
-    buf.push_str(
+    buf.push_str(&format!(
         r##"  <defs>
     <filter id="shadow" x="-4%" y="-4%" width="108%" height="116%">
       <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.08"/>
     </filter>
     <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L8,3 L0,6 L2,3 Z" fill="#959DA5"/>
+      <path d="M0,0 L8,3 L0,6 L2,3 Z" fill="{}"/>
     </marker>
   </defs>
 "##,
-    );
+        scene.edge_color
+    ));
 
     // Background
     buf.push_str(&format!(

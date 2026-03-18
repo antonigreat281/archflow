@@ -58,6 +58,11 @@ export function initPlayground(wasmRenderSvg) {
     }
   });
 
+  // Theme selector
+  document.getElementById('theme-select').addEventListener('change', (e) => {
+    applyTheme(e.target.value);
+  });
+
   // Mode toggle
   document.getElementById('mode-btn').addEventListener('click', toggleMode);
 
@@ -177,6 +182,13 @@ function onMouseUp() {
   }
 }
 
+// ─── Theme ───
+
+function applyTheme(themeName) {
+  // Just re-render — the render function reads the dropdown value
+  render();
+}
+
 // ─── Mode Toggle ───
 
 function toggleMode() {
@@ -216,13 +228,17 @@ function render() {
   let jsonStr;
 
   try {
+    let ir;
     if (mode === 'dsl') {
-      const ir = parseDSL(content);
-      jsonStr = JSON.stringify(ir);
+      ir = parseDSL(content);
     } else {
-      JSON.parse(content);
-      jsonStr = content;
+      ir = JSON.parse(content);
     }
+    // Apply theme from dropdown
+    const selectedTheme = document.getElementById('theme-select').value;
+    if (!ir.metadata) ir.metadata = {};
+    ir.metadata.theme = selectedTheme;
+    jsonStr = JSON.stringify(ir);
   } catch (e) {
     setStatus('Parse error: ' + e.message, true);
     return;

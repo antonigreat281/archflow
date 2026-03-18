@@ -43,6 +43,7 @@ pub struct SceneGraph {
     pub width: f64,
     pub height: f64,
     pub background: String,
+    pub edge_color: String,
     pub elements: Vec<SceneElement>,
 }
 
@@ -145,7 +146,7 @@ pub fn build_scene(layout: &LayoutResult, ir: &DiagramIR, theme: &Theme) -> Scen
                         width: text_width,
                         height: 20.0,
                         rx: 4.0,
-                        fill: "#FFFFFF".to_string(),
+                        fill: theme.background.clone(),
                         stroke: "none".to_string(),
                         stroke_width: 0.0,
                         shadow: false,
@@ -205,6 +206,7 @@ pub fn build_scene(layout: &LayoutResult, ir: &DiagramIR, theme: &Theme) -> Scen
         width: layout.width,
         height: layout.height,
         background: theme.background.clone(),
+        edge_color: theme.edge_stroke.clone(),
         elements,
     }
 }

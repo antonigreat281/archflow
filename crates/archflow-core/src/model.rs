@@ -19,6 +19,42 @@ pub struct Metadata {
     pub direction: String,
     #[serde(default = "default_theme")]
     pub theme: String,
+    #[serde(default)]
+    pub custom_theme: Option<CustomThemeDef>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomThemeDef {
+    #[serde(default)]
+    pub background: Option<String>,
+    #[serde(default)]
+    pub node_palette: Option<Vec<NodeColorDef>>,
+    #[serde(default)]
+    pub node_text_color: Option<String>,
+    #[serde(default)]
+    pub node_corner_radius: Option<f64>,
+    #[serde(default)]
+    pub cluster_fills: Option<Vec<String>>,
+    #[serde(default)]
+    pub cluster_stroke: Option<String>,
+    #[serde(default)]
+    pub cluster_text_color: Option<String>,
+    #[serde(default)]
+    pub edge_stroke: Option<String>,
+    #[serde(default)]
+    pub edge_stroke_width: Option<f64>,
+    #[serde(default)]
+    pub font_family: Option<String>,
+    #[serde(default)]
+    pub font_size: Option<f64>,
+    #[serde(default)]
+    pub node_shadow: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeColorDef {
+    pub fill: String,
+    pub stroke: String,
 }
 
 fn default_direction() -> String {
