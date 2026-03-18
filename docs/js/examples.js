@@ -28,6 +28,33 @@ cluster Data Tier {
 }`,
   },
   {
+    name: "GCP Architecture (Icons)",
+    dsl: `title: GCP Data Pipeline
+direction: LR
+
+gcp:cloud-storage Data Lake >> gcp:bigquery Analytics
+gcp:compute-engine App Server >> gcp:cloud-sql Database
+gcp:compute-engine App Server >> gcp:cloud-storage Data Lake
+gcp:bigquery Analytics >> gcp:looker Dashboard
+gcp:gke Microservices >> gcp:cloud-run Functions
+
+cluster:gcp:region us-central1 {
+  gcp:compute-engine App Server
+  gcp:cloud-sql Database
+  gcp:cloud-storage Data Lake
+  gcp:bigquery Analytics
+  gcp:looker Dashboard
+  gcp:gke Microservices
+  gcp:cloud-run Functions
+}
+
+cluster:gcp:vpc Production VPC {
+  gcp:compute-engine App Server
+  gcp:cloud-sql Database
+  gcp:gke Microservices
+}`,
+  },
+  {
     name: "CI/CD Pipeline",
     dsl: `title: CI/CD Pipeline
 direction: TB
