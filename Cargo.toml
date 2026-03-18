@@ -3,8 +3,9 @@ resolver = "2"
 members = [
     "crates/archflow-core",
     "crates/archflow-cli",
-    "crates/archflow-ffi",
-    "crates/archflow-wasm",
+    "crates/archflow-lsp",
+    "bindings/python-ffi",
+    "bindings/wasm",
 ]
 
 [workspace.package]

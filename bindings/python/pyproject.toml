@@ -18,6 +18,6 @@ target-version = "py39"
 select = ["E", "F", "I", "W"]
 
 [tool.maturin]
-manifest-path = "../crates/archflow-ffi/Cargo.toml"
+manifest-path = "../python-ffi/Cargo.toml"
 python-source = "."
 module-name = "archflow._archflow_rust"
