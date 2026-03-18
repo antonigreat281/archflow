@@ -212,22 +212,27 @@ mod tests {
     }
 
     #[test]
-    fn test_cluster_with_provider() {
-        let ir = r#"{
+    fn test_cluster_with_provider_style() {
+        let ir = r##"{
             "version": "1.0.0",
             "nodes": [
                 { "id": "web", "label": "Web Server" },
                 { "id": "db", "label": "Database" }
             ],
             "clusters": [
-                { "id": "vpc", "label": "VPC", "children": ["web", "db"], "provider": "aws", "cluster_type": "vpc" }
+                {
+                    "id": "vpc", "label": "VPC", "children": ["web", "db"],
+                    "provider": "aws", "cluster_type": "vpc",
+                    "style": { "stroke": "#8C4FFF", "fill": "rgba(140,79,255,0.04)", "stroke_dasharray": "6 3", "corner_radius": 0 }
+                }
             ],
             "edges": [{ "from": "web", "to": "db" }]
-        }"#;
+        }"##;
         let svg = render_svg(ir).unwrap();
         assert!(svg.contains("VPC"));
-        // AWS VPC preset stroke color
-        assert!(svg.contains("#00A4A6"));
+        // Style comes from IR (injected by resolver from registry manifest)
+        assert!(svg.contains("#8C4FFF"));
+        assert!(svg.contains("stroke-dasharray"));
     }
 
     #[test]

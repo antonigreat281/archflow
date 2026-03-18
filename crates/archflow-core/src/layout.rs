@@ -5,7 +5,7 @@ use crate::model::DiagramIR;
 
 const NODE_WIDTH: f64 = 160.0;
 const NODE_HEIGHT: f64 = 60.0;
-const NODE_HEIGHT_WITH_ICON: f64 = 80.0;
+const NODE_HEIGHT_WITH_ICON: f64 = 70.0;
 const H_SPACING: f64 = 120.0;
 const V_SPACING: f64 = 120.0;
 const CLUSTER_PADDING: f64 = 50.0;
@@ -179,6 +179,17 @@ pub fn compute_layout(ir: &DiagramIR) -> Result<LayoutResult, ArchflowError> {
         })
         .collect();
 
+    // Build set of icon nodes for edge calculations
+    let icon_nodes: HashSet<&str> = ir
+        .nodes
+        .iter()
+        .filter(|n| n.icon_svg.is_some())
+        .map(|n| n.id.as_str())
+        .collect();
+
+    // Icon node dimensions: 48px icon centered in NODE_WIDTH
+    let icon_size = 48.0;
+
     // Build layout edges (simple straight lines center-to-center)
     let mut layout_edges: Vec<LayoutEdge> = ir
         .edges
@@ -195,17 +206,45 @@ pub fn compute_layout(ir: &DiagramIR) -> Result<LayoutResult, ArchflowError> {
                 .get(e.to.as_str())
                 .copied()
                 .unwrap_or(NODE_HEIGHT);
+            let from_has_icon = icon_nodes.contains(e.from.as_str());
+            let to_has_icon = icon_nodes.contains(e.to.as_str());
 
+            // For icon nodes, connect to the icon center area (48px centered)
+            // For box nodes, connect to the box edge
             let from_cx = fx + NODE_WIDTH / 2.0;
-            let from_cy = fy + from_h / 2.0;
+            let from_cy = if from_has_icon {
+                fy + icon_size / 2.0
+            } else {
+                fy + from_h / 2.0
+            };
             let to_cx = tx + NODE_WIDTH / 2.0;
-            let to_cy = ty + to_h / 2.0;
+            let to_cy = if to_has_icon {
+                ty + icon_size / 2.0
+            } else {
+                ty + to_h / 2.0
+            };
 
             // Connect from edge of source to edge of target
             let (start, end) = if is_lr {
-                ((fx + NODE_WIDTH, from_cy), (tx, to_cy))
+                let from_right = if from_has_icon {
+                    from_cx + icon_size / 2.0
+                } else {
+                    fx + NODE_WIDTH
+                };
+                let to_left = if to_has_icon {
+                    to_cx - icon_size / 2.0
+                } else {
+                    tx
+                };
+                ((from_right, from_cy), (to_left, to_cy))
             } else {
-                ((from_cx, fy + from_h), (to_cx, ty))
+                let from_bottom = if from_has_icon {
+                    fy + icon_size
+                } else {
+                    fy + from_h
+                };
+                let to_top = ty;
+                ((from_cx, from_bottom), (to_cx, to_top))
             };
 
             LayoutEdge {

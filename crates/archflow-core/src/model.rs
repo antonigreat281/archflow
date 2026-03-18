@@ -24,6 +24,9 @@ pub struct Metadata {
     /// Icon sources for resolution (e.g., "github:user/repo", "https://...")
     #[serde(default)]
     pub icon_sources: Vec<String>,
+    /// Per-provider node render modes from registry (e.g., {"aws": "icon_only"})
+    #[serde(default)]
+    pub node_render_modes: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,6 +97,9 @@ pub struct ClusterDef {
     /// Cluster type (e.g., "region", "vpc", "subnet") for style presets
     #[serde(default)]
     pub cluster_type: Option<String>,
+    /// Resolved inline SVG icon for the cluster label area
+    #[serde(default)]
+    pub icon_svg: Option<String>,
     #[serde(default)]
     pub style: Option<Style>,
 }
@@ -114,6 +120,7 @@ pub struct Style {
     pub stroke: Option<String>,
     pub stroke_width: Option<f64>,
     pub stroke_dasharray: Option<String>,
+    pub corner_radius: Option<f64>,
     pub font_size: Option<f64>,
     pub font_color: Option<String>,
 }

@@ -19,6 +19,11 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Icon sources for resolution (e.g., 'github:user/repo', 'https://...')"
+        },
+        "node_render_modes": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Per-provider node render mode (e.g., {'aws': 'icon_only'})"
         }
       }
     },
@@ -51,6 +56,7 @@
           },
           "provider": { "type": "string", "description": "Provider name (e.g., 'aws', 'gcp')" },
           "cluster_type": { "type": "string", "description": "Cluster type (e.g., 'region', 'vpc', 'subnet')" },
+          "icon_svg": { "type": "string", "description": "Resolved inline SVG icon for the cluster label" },
           "style": { "$ref": "#/$defs/style" }
         }
       }
@@ -78,7 +84,8 @@
         "stroke_width": { "type": "number" },
         "stroke_dasharray": { "type": "string" },
         "font_size": { "type": "number" },
-        "font_color": { "type": "string" }
+        "font_color": { "type": "string" },
+        "corner_radius": { "type": "number" }
       }
     }
   }
