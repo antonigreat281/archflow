@@ -1,0 +1,16 @@
+[package]
+name = "archflow-lsp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Language Server Protocol implementation for Archflow DSL"
+
+[[bin]]
+name = "archflow-lsp"
+path = "src/main.rs"
+
+[dependencies]
+archflow-core.workspace = true
+serde_json.workspace = true
+tower-lsp = "0.20"
+tokio = { version = "1", features = ["full"] }
