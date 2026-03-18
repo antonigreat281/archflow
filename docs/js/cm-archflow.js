@@ -21,7 +21,11 @@
 
         // Metadata keywords at start of line
         if (stream.sol()) {
-          if (stream.match(/^(title|direction|theme)\s*:/i)) {
+          if (stream.match(/^(title|direction|theme|icon_sources)\s*:/i)) {
+            return "keyword";
+          }
+          if (stream.match(/^cluster:[a-z]+:[a-z]+\s/i)) {
+            state.inClusterHeader = true;
             return "keyword";
           }
           if (stream.match(/^cluster\b/i)) {
@@ -62,6 +66,11 @@
         if (stream.match(":")) {
           stream.skipToEnd();
           return "string";
+        }
+
+        // Provider:type prefix (e.g., aws:EC2)
+        if (stream.match(/^[a-z]+:[A-Z][a-zA-Z0-9]*/)) {
+          return "atom";
         }
 
         // Metadata value (rest of line after keyword was consumed)

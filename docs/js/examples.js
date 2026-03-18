@@ -134,6 +134,64 @@ cluster Serving {
 }`,
   },
   {
+    name: "AWS Architecture (Icons)",
+    dsl: `title: AWS Web Architecture
+direction: LR
+
+aws:ELB Load Balancer >> aws:EC2 Web Server >> aws:RDS Database
+aws:EC2 Web Server >> aws:S3 Static Assets
+aws:EC2 Web Server >> aws:ElastiCache Cache
+
+cluster:aws:region US East 1 {
+  aws:ELB Load Balancer
+  aws:EC2 Web Server
+  aws:RDS Database
+  aws:S3 Static Assets
+  aws:ElastiCache Cache
+}
+
+cluster:aws:vpc Production VPC {
+  aws:EC2 Web Server
+  aws:RDS Database
+  aws:ElastiCache Cache
+}`,
+  },
+  {
+    name: "Provider Clusters",
+    dsl: `title: Multi-Cloud Setup
+direction: TB
+
+Users >> CDN >> API Gateway
+
+API Gateway >> Auth Service
+API Gateway >> App Server
+App Server >> Primary DB
+App Server >> Cache
+App Server >> Queue
+Queue >> Worker
+Worker >> Primary DB
+
+cluster:aws:region AWS Region {
+  API Gateway
+  Auth Service
+  App Server
+  Primary DB
+  Cache
+  Queue
+  Worker
+}
+
+cluster:aws:vpc Production VPC {
+  App Server
+  Primary DB
+  Cache
+}
+
+cluster:aws:subnet Private Subnet {
+  Primary DB
+}`,
+  },
+  {
     name: "Event-Driven",
     dsl: `title: Event-Driven Architecture
 direction: LR

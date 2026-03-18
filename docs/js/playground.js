@@ -14,6 +14,15 @@ let isPanning = false;
 let startX = 0;
 let startY = 0;
 
+// Icon cache (in-memory) — acts as the "disk cache" equivalent for the browser
+const iconCache = new Map();
+
+// Central registry — always tried as fallback (same as Python resolver)
+// In local dev, icons are served from the same origin via browser-sync --serveStatic
+const DEFAULT_REGISTRY = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? location.origin
+  : 'https://raw.githubusercontent.com/soulee-dev/archflow-icons/main';
+
 export function initPlayground(wasmRenderSvg) {
   renderFn = wasmRenderSvg;
 
@@ -87,6 +96,96 @@ export function initPlayground(wasmRenderSvg) {
 
   // Load first example in DSL mode
   editor.setValue(examples[0].dsl);
+}
+
+// ─── Icon Resolution ───
+// Chain: 1. icon_svg set → 2. builtin → 3. cache → 4. central registry → 5. custom sources
+
+/**
+ * Resolve icons for all nodes in the IR.
+ * Browser has no local filesystem, so the chain is:
+ *   1. icon_svg already set (or builtin from parser) → skip
+ *   2. In-memory cache hit
+ *   3. Central registry (DEFAULT_REGISTRY)
+ *   4. Custom icon_sources
+ */
+async function resolveIcons(ir) {
+  const sources = (ir.metadata && ir.metadata.icon_sources) || [];
+
+  // Build ordered URL list per node: central registry first, then custom sources
+  const resolveQueue = [];
+
+  for (const node of (ir.nodes || [])) {
+    const provider = node.provider;
+    const icon = node.icon;
+    if (!provider || !icon) continue;
+
+    // Build candidate URLs in priority order
+    const urls = [];
+
+    // Central registry (always first)
+    urls.push(`${DEFAULT_REGISTRY}/${provider}/nodes/${icon}.svg`);
+
+    // Custom sources
+    for (const source of sources) {
+      const baseUrl = resolveSourceBase(source);
+      if (baseUrl) {
+        urls.push(`${baseUrl}/${provider}/nodes/${icon}.svg`);
+      }
+    }
+
+    resolveQueue.push({ node, urls });
+  }
+
+  // Resolve all nodes in parallel, each trying URLs in order
+  await Promise.allSettled(
+    resolveQueue.map(({ node, urls }) => resolveNodeIcon(node, urls))
+  );
+
+  return ir;
+}
+
+async function resolveNodeIcon(node, urls) {
+  for (const url of urls) {
+    const svg = await fetchIcon(url);
+    if (svg) {
+      node.icon_svg = svg;
+      return;
+    }
+  }
+}
+
+function resolveSourceBase(source) {
+  const ghMatch = source.match(/^github:(.+\/.+)$/);
+  if (ghMatch) {
+    return `https://raw.githubusercontent.com/${ghMatch[1]}/main`;
+  }
+  if (source.startsWith('https://') || source.startsWith('http://')) {
+    return source.replace(/\/$/, '');
+  }
+  return null;
+}
+
+async function fetchIcon(url) {
+  if (iconCache.has(url)) {
+    return iconCache.get(url);
+  }
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      iconCache.set(url, null);
+      return null;
+    }
+    let svg = await resp.text();
+    // Sanitize: remove script tags and event handlers
+    svg = svg.replace(/<script[\s\S]*?<\/script>/gi, '');
+    svg = svg.replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '');
+    iconCache.set(url, svg);
+    return svg;
+  } catch {
+    iconCache.set(url, null);
+    return null;
+  }
 }
 
 // ─── Pan & Zoom ───
@@ -221,14 +320,13 @@ function toggleMode() {
 
 // ─── Render ───
 
-function render() {
+async function render() {
   if (!renderFn || !editor) return;
 
   const content = editor.getValue();
-  let jsonStr;
+  let ir;
 
   try {
-    let ir;
     if (mode === 'dsl') {
       ir = parseDSL(content);
     } else {
@@ -238,13 +336,20 @@ function render() {
     const selectedTheme = document.getElementById('theme-select').value;
     if (!ir.metadata) ir.metadata = {};
     ir.metadata.theme = selectedTheme;
-    jsonStr = JSON.stringify(ir);
   } catch (e) {
     setStatus('Parse error: ' + e.message, true);
     return;
   }
 
   try {
+    // Resolve icons — central registry is always available, no need for explicit icon_sources
+    // Always try to resolve: real icons override parser builtins
+    const hasProviderNodes = (ir.nodes || []).some(n => n.provider && n.icon);
+    if (hasProviderNodes) {
+      await resolveIcons(ir);
+    }
+
+    const jsonStr = JSON.stringify(ir);
     const svg = renderFn(jsonStr);
     const preview = document.getElementById('svg-preview');
     preview.innerHTML = svg;
