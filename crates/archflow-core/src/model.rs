@@ -21,9 +21,9 @@ pub struct Metadata {
     pub theme: String,
     #[serde(default)]
     pub custom_theme: Option<CustomThemeDef>,
-    /// Icon sources for resolution (e.g., "github:user/repo", "https://...")
+    /// Per-provider source overrides from "use ... from ..." (e.g., {"aws": "github:org/repo"})
     #[serde(default)]
-    pub icon_sources: Vec<String>,
+    pub provider_sources: std::collections::HashMap<String, Option<String>>,
     /// Per-provider node render modes from registry (e.g., {"aws": "icon_only"})
     #[serde(default)]
     pub node_render_modes: std::collections::HashMap<String, String>,

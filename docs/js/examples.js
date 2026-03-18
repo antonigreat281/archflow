@@ -31,6 +31,7 @@ cluster Data Tier {
     name: "GCP Architecture (Icons)",
     dsl: `title: GCP Data Pipeline
 direction: LR
+use gcp
 
 gcp:cloud-storage Data Lake >> gcp:bigquery Analytics
 gcp:compute-engine App Server >> gcp:cloud-sql Database
@@ -58,6 +59,7 @@ cluster:gcp:vpc Production VPC {
     name: "Kubernetes (Icons)",
     dsl: `title: Kubernetes Microservices
 direction: LR
+use k8s
 
 k8s:ingress Ingress >> k8s:service API Service >> k8s:deployment API Pods
 k8s:service API Service >> k8s:config-map Config
@@ -201,6 +203,7 @@ cluster Serving {
     name: "AWS Architecture (Icons)",
     dsl: `title: AWS Web Architecture
 direction: LR
+use aws
 
 aws:ELB Load Balancer >> aws:EC2 Web Server >> aws:RDS Database
 aws:EC2 Web Server >> aws:S3 Static Assets
@@ -224,6 +227,7 @@ cluster:aws:vpc Production VPC {
     name: "Provider Clusters",
     dsl: `title: Multi-Cloud Setup
 direction: TB
+use aws
 
 Users >> CDN >> API Gateway
 

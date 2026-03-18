@@ -81,6 +81,10 @@ export function initPlayground(wasmRenderSvg) {
   // Download button
   document.getElementById('download-btn').addEventListener('click', downloadSvg);
 
+  // Share button
+  const shareBtn = document.getElementById('share-btn');
+  if (shareBtn) shareBtn.addEventListener('click', shareDiagram);
+
   // Zoom controls
   document.getElementById('zoom-in').addEventListener('click', () => zoom(1.25));
   document.getElementById('zoom-out').addEventListener('click', () => zoom(0.8));
@@ -94,8 +98,13 @@ export function initPlayground(wasmRenderSvg) {
   window.addEventListener('mousemove', onMouseMove);
   window.addEventListener('mouseup', onMouseUp);
 
-  // Load first example in DSL mode
-  editor.setValue(examples[0].dsl);
+  // Load from shared URL or first example
+  const shared = loadFromURL();
+  if (shared) {
+    editor.setValue(shared);
+  } else {
+    editor.setValue(examples[0].dsl);
+  }
 }
 
 // ─── Icon & Style Resolution ───
@@ -103,11 +112,23 @@ export function initPlayground(wasmRenderSvg) {
 
 const manifestCache = new Map();
 
-async function fetchManifest(provider) {
-  const key = `${provider}/manifest`;
+function resolveSourceBase(source) {
+  if (!source) return DEFAULT_REGISTRY;
+  const ghMatch = source.match(/^github:(.+\/.+)$/);
+  if (ghMatch) {
+    return `https://raw.githubusercontent.com/${ghMatch[1]}/main`;
+  }
+  if (source.startsWith('https://') || source.startsWith('http://')) {
+    return source.replace(/\/$/, '');
+  }
+  return DEFAULT_REGISTRY;
+}
+
+async function fetchManifest(provider, baseUrl) {
+  const key = `${baseUrl}/${provider}/manifest`;
   if (manifestCache.has(key)) return manifestCache.get(key);
 
-  const url = `${DEFAULT_REGISTRY}/${provider}/manifest.json`;
+  const url = `${baseUrl}/${provider}/manifest.json`;
   try {
     const resp = await fetch(url);
     if (!resp.ok) { manifestCache.set(key, null); return null; }
@@ -121,23 +142,27 @@ async function fetchManifest(provider) {
 }
 
 async function resolveIcons(ir) {
-  const sources = (ir.metadata && ir.metadata.icon_sources) || [];
+  // Only resolve providers declared with "use"
+  const providerSources = (ir.metadata && ir.metadata.provider_sources) || {};
+  const declaredProviders = new Set(Object.keys(providerSources));
 
-  // Collect providers
-  const providers = new Set();
-  for (const n of (ir.nodes || [])) if (n.provider) providers.add(n.provider);
-  for (const c of (ir.clusters || [])) if (c.provider) providers.add(c.provider);
+  // No "use" declarations → nothing to resolve
+  if (declaredProviders.size === 0) return ir;
 
-  // Load manifests in parallel
+  // Resolve base URLs and load manifests in parallel
+  const providerBaseUrls = {};
   const manifests = {};
-  await Promise.all([...providers].map(async p => {
-    manifests[p] = await fetchManifest(p);
+  await Promise.all([...declaredProviders].map(async p => {
+    const base = resolveSourceBase(providerSources[p]);
+    providerBaseUrls[p] = base;
+    manifests[p] = await fetchManifest(p, base);
   }));
 
   // Apply cluster_styles from manifests
   for (const cluster of (ir.clusters || [])) {
     if (!cluster.provider || !cluster.cluster_type) continue;
-    if (cluster.style) continue; // don't override explicit style
+    if (!declaredProviders.has(cluster.provider)) continue;
+    if (cluster.style) continue;
     const mf = manifests[cluster.provider];
     const preset = mf && mf.cluster_styles && mf.cluster_styles[cluster.cluster_type];
     if (preset) {
@@ -161,14 +186,10 @@ async function resolveIcons(ir) {
     const provider = node.provider;
     const icon = node.icon;
     if (!provider || !icon) continue;
+    if (!declaredProviders.has(provider)) continue;
 
-    const urls = [];
-    urls.push(`${DEFAULT_REGISTRY}/${provider}/nodes/${icon}.svg`);
-    for (const source of sources) {
-      const baseUrl = resolveSourceBase(source);
-      if (baseUrl) urls.push(`${baseUrl}/${provider}/nodes/${icon}.svg`);
-    }
-    resolveQueue.push({ node, urls });
+    const base = providerBaseUrls[provider];
+    resolveQueue.push({ node, urls: [`${base}/${provider}/nodes/${icon}.svg`] });
   }
 
   // Resolve cluster icons
@@ -176,14 +197,10 @@ async function resolveIcons(ir) {
     const provider = cluster.provider;
     const clusterType = cluster.cluster_type;
     if (!provider || !clusterType) continue;
+    if (!declaredProviders.has(provider)) continue;
 
-    const urls = [];
-    urls.push(`${DEFAULT_REGISTRY}/${provider}/clusters/${clusterType}.svg`);
-    for (const source of sources) {
-      const baseUrl = resolveSourceBase(source);
-      if (baseUrl) urls.push(`${baseUrl}/${provider}/clusters/${clusterType}.svg`);
-    }
-    resolveQueue.push({ node: cluster, urls });
+    const base = providerBaseUrls[provider];
+    resolveQueue.push({ node: cluster, urls: [`${base}/${provider}/clusters/${clusterType}.svg`] });
   }
 
   // Fetch all icons in parallel
@@ -202,17 +219,6 @@ async function resolveNodeIcon(node, urls) {
       return;
     }
   }
-}
-
-function resolveSourceBase(source) {
-  const ghMatch = source.match(/^github:(.+\/.+)$/);
-  if (ghMatch) {
-    return `https://raw.githubusercontent.com/${ghMatch[1]}/main`;
-  }
-  if (source.startsWith('https://') || source.startsWith('http://')) {
-    return source.replace(/\/$/, '');
-  }
-  return null;
 }
 
 async function fetchIcon(url) {
@@ -393,12 +399,8 @@ async function render() {
   }
 
   try {
-    // Resolve icons — central registry is always available, no need for explicit icon_sources
-    const hasProviderRefs = (ir.nodes || []).some(n => n.provider && n.icon)
-      || (ir.clusters || []).some(c => c.provider && c.cluster_type);
-    if (hasProviderRefs) {
-      await resolveIcons(ir);
-    }
+    // Resolve icons for providers declared with "use"
+    await resolveIcons(ir);
 
     const jsonStr = JSON.stringify(ir);
     const svg = renderFn(jsonStr);
@@ -437,4 +439,61 @@ function downloadSvg() {
   a.download = 'archflow-diagram.svg';
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ─── Share ───
+
+function encodeContent(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+function decodeContent(encoded) {
+  return decodeURIComponent(escape(atob(encoded)));
+}
+
+function shareDiagram() {
+  if (!editor) return;
+  const content = editor.getValue();
+  const encoded = encodeContent(content);
+  const url = `${location.origin}${location.pathname}#playground/${mode}/${encoded}`;
+
+  navigator.clipboard.writeText(url).then(() => {
+    setStatus('Share URL copied to clipboard!', false);
+  }).catch(() => {
+    // Fallback: show in prompt
+    prompt('Share URL:', url);
+  });
+
+  // Also update browser URL without reload
+  history.replaceState(null, '', `#playground/${mode}/${encoded}`);
+}
+
+function loadFromURL() {
+  const hash = location.hash;
+  if (!hash.startsWith('#playground/')) return null;
+
+  const parts = hash.substring('#playground/'.length);
+  const slashIdx = parts.indexOf('/');
+  if (slashIdx < 0) return null;
+
+  const urlMode = parts.substring(0, slashIdx);
+  const encoded = parts.substring(slashIdx + 1);
+
+  try {
+    const content = decodeContent(encoded);
+
+    // Switch to correct mode
+    if (urlMode === 'json' && mode === 'dsl') {
+      mode = 'json';
+      const modeBtn = document.getElementById('mode-btn');
+      if (modeBtn) {
+        modeBtn.textContent = 'JSON';
+        modeBtn.title = 'Switch to DSL mode';
+      }
+    }
+
+    return content;
+  } catch {
+    return null;
+  }
 }

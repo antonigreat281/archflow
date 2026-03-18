@@ -205,7 +205,7 @@ class IconResolver:
         return None
 
     def _resolve_one(
-        self, provider: str, icon_name: str, sources: list[str], subdir: str = "nodes"
+        self, provider: str, icon_name: str, base_url: str | None, subdir: str = "nodes"
     ) -> str | None:
         """Run the full resolution chain for a single icon."""
         # Step 2: Local
@@ -213,53 +213,67 @@ class IconResolver:
         if svg:
             return svg
 
-        # Step 3+4: Central registry (cache checked inside _fetch_url)
-        if self.registry:
+        # Step 3: Explicit source (from "use ... from ...")
+        if base_url:
+            url = f"{base_url}/{provider}/{subdir}/{icon_name}.svg"
+            svg = _fetch_url(url)
+            if svg:
+                return svg
+
+        # Step 4: Default registry fallback
+        if self.registry and base_url != self.registry:
             url = f"{self.registry}/{provider}/{subdir}/{icon_name}.svg"
             svg = _fetch_url(url)
             if svg:
                 return svg
 
-        # Step 5: Custom icon_sources
-        for source in sources:
-            base_url = _source_to_base_url(source)
-            if base_url:
-                url = f"{base_url}/{provider}/{subdir}/{icon_name}.svg"
-                svg = _fetch_url(url)
-                if svg:
-                    return svg
-
         return None
 
     def resolve(self, ir_dict: dict) -> dict:
         """Resolve all icon references and apply provider styles in-place."""
-        sources = ir_dict.get("metadata", {}).get("icon_sources", [])
+        # Build provider → base_url map from provider_sources
+        provider_sources = ir_dict.get("metadata", {}).get("provider_sources", {})
+
+        # Resolve base URLs
+        declared_providers: dict[str, str | None] = {}
+        for provider, source in provider_sources.items():
+            if source:
+                declared_providers[provider] = _source_to_base_url(source)
+            else:
+                declared_providers[provider] = None  # use default registry
+
+        # Only resolve declared providers
+        if not declared_providers:
+            return ir_dict
 
         # Apply provider styles from manifests
         self._apply_cluster_styles(ir_dict)
         self._apply_node_render_mode(ir_dict)
 
         for node in ir_dict.get("nodes", []):
-            # Step 1: Already resolved
             if node.get("icon_svg"):
                 continue
 
             icon = node.get("icon")
             provider = node.get("provider")
 
+            # Only resolve if provider is declared with "use"
+            if provider and provider not in declared_providers:
+                continue
+
+            base_url = declared_providers.get(provider)
+
             if icon and (icon.startswith("https://") or icon.startswith("http://")):
-                # Direct URL — skip chain, just fetch
                 svg = _fetch_url(icon)
                 if svg:
                     node["icon_svg"] = svg
             elif provider and icon:
-                svg = self._resolve_one(provider, icon, sources)
+                svg = self._resolve_one(provider, icon, base_url)
                 if svg:
                     node["icon_svg"] = svg
             elif provider and not icon:
-                # Fallback: use node id as icon name
                 node_id = node.get("id", "")
-                svg = self._resolve_one(provider, node_id, sources)
+                svg = self._resolve_one(provider, node_id, base_url)
                 if svg:
                     node["icon_svg"] = svg
 
@@ -271,8 +285,12 @@ class IconResolver:
             provider = cluster.get("provider")
             cluster_type = cluster.get("cluster_type")
 
+            if provider and provider not in declared_providers:
+                continue
+
             if provider and cluster_type:
-                svg = self._resolve_one(provider, cluster_type, sources, subdir="clusters")
+                base_url = declared_providers.get(provider)
+                svg = self._resolve_one(provider, cluster_type, base_url, subdir="clusters")
                 if svg:
                     cluster["icon_svg"] = svg
 

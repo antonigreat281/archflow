@@ -27,11 +27,14 @@ export function parseDSL(input) {
   const lines = input.split('\n');
   const ir = {
     version: '1.0.0',
-    metadata: { title: '', direction: 'TB', theme: 'default', icon_sources: [] },
+    metadata: { title: '', direction: 'TB', theme: 'default' },
     nodes: [],
     clusters: [],
     edges: [],
   };
+
+  // use declarations: provider → source URL or null (default registry)
+  const providerSources = new Map();
 
   const nodeMap = new Map(); // label -> id
   let i = 0;
@@ -120,10 +123,12 @@ export function parseDSL(input) {
       continue;
     }
 
-    // Metadata: icon_sources: ...
-    const iconSourcesMatch = trimmed.match(/^icon_sources\s*:\s*(.+)$/i);
-    if (iconSourcesMatch) {
-      ir.metadata.icon_sources = iconSourcesMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+    // use provider [from source]
+    const useMatch = trimmed.match(/^use\s+([a-z][a-z0-9]*)(?:\s+from\s+(.+))?$/i);
+    if (useMatch) {
+      const provider = useMatch[1].toLowerCase();
+      const source = useMatch[2] ? useMatch[2].trim() : null;
+      providerSources.set(provider, source);
       continue;
     }
 
@@ -260,6 +265,15 @@ export function parseDSL(input) {
     if (trimmed && !trimmed.includes('{') && !trimmed.includes('}')) {
       ensureNode(trimmed);
     }
+  }
+
+  // Write provider sources to metadata
+  if (providerSources.size > 0) {
+    const sources = {};
+    for (const [provider, source] of providerSources) {
+      sources[provider] = source; // null means default registry
+    }
+    ir.metadata.provider_sources = sources;
   }
 
   return ir;

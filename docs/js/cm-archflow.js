@@ -21,7 +21,11 @@
 
         // Metadata keywords at start of line
         if (stream.sol()) {
-          if (stream.match(/^(title|direction|theme|icon_sources)\s*:/i)) {
+          if (stream.match(/^use\s+/i)) {
+            stream.skipToEnd();
+            return "keyword";
+          }
+          if (stream.match(/^(title|direction|theme)\s*:/i)) {
             return "keyword";
           }
           if (stream.match(/^cluster:[a-z]+:[a-z]+\s/i)) {
