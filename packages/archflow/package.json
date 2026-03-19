@@ -1,0 +1,26 @@
+{
+  "name": "archflow",
+  "version": "0.1.0",
+  "description": "Architecture diagrams as code — powered by Rust + WASM",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "wasm"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/soulee-dev/archflow"
+  },
+  "scripts": {
+    "build:wasm": "wasm-pack build ../../bindings/wasm --target web --out-dir ../../packages/archflow/wasm",
+    "build": "tsc",
+    "prepublishOnly": "npm run build:wasm && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^5"
+  }
+}
