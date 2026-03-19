@@ -1,0 +1,18 @@
+[package]
+name = "archflow-node"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Node.js native bindings for Archflow"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+archflow-core.workspace = true
+napi = { version = "2", default-features = false, features = ["napi4", "serde-json"] }
+napi-derive = "2"
+serde_json = "1"
+
+[build-dependencies]
+napi-build = "2"

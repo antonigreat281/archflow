@@ -5,6 +5,7 @@ members = [
     "crates/archflow-cli",
     "crates/archflow-lsp",
     "bindings/python-ffi",
+    "bindings/node-ffi",
     "bindings/wasm",
 ]
 
