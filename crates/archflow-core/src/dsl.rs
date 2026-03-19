@@ -218,12 +218,12 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn parse_cluster(&mut self, trimmed: &str, line_num: usize) -> Result<(), ArchflowError> {
-        let without_brace = trimmed[..trimmed.len() - 1].trim();
-
-        let (provider, cluster_type, label) = if let Some(rest) =
-            without_brace.strip_prefix("cluster:")
-        {
+    /// Parse cluster header to extract provider, cluster_type, and label.
+    fn parse_cluster_header(
+        without_brace: &str,
+        line_num: usize,
+    ) -> Result<(Option<String>, Option<String>, String), ArchflowError> {
+        if let Some(rest) = without_brace.strip_prefix("cluster:") {
             let first_colon = rest.find(':').ok_or_else(|| ArchflowError::ParseError {
                 line: line_num,
                 message: "Expected cluster:provider:type Label {".into(),
@@ -239,7 +239,6 @@ impl<'a> Parser<'a> {
             let ctype = &after_provider[..space_idx];
             let label = after_provider[space_idx + 1..].trim();
 
-            // Validate provider and cluster_type
             if !is_valid_provider(prov) {
                 return Err(ArchflowError::ParseError {
                     line: line_num,
@@ -257,19 +256,24 @@ impl<'a> Parser<'a> {
                 });
             }
 
-            (
+            Ok((
                 Some(prov.to_string()),
                 Some(ctype.to_string()),
                 label.to_string(),
-            )
+            ))
         } else {
             let label = without_brace
                 .strip_prefix("cluster")
                 .unwrap()
                 .trim()
                 .to_string();
-            (None, None, label)
-        };
+            Ok((None, None, label))
+        }
+    }
+
+    fn parse_cluster(&mut self, trimmed: &str, line_num: usize) -> Result<(), ArchflowError> {
+        let without_brace = trimmed[..trimmed.len() - 1].trim();
+        let (provider, cluster_type, label) = Self::parse_cluster_header(without_brace, line_num)?;
 
         if label.is_empty() {
             return Err(ArchflowError::ParseError {
@@ -280,6 +284,7 @@ impl<'a> Parser<'a> {
 
         let cluster_id = to_id(&label);
         let mut children = Vec::new();
+        let mut sub_clusters = Vec::new();
         let mut closed = false;
 
         // Parse lines inside cluster until }
@@ -293,6 +298,17 @@ impl<'a> Parser<'a> {
                 break;
             }
             if inner.is_empty() || inner.starts_with('#') || inner.starts_with("//") {
+                continue;
+            }
+
+            // Nested cluster
+            if inner.starts_with("cluster") && inner.ends_with('{') {
+                self.parse_cluster(inner, inner_line_num)?;
+                // The last pushed cluster is the nested one
+                let nested_id = self.clusters.last().unwrap().id.clone();
+                if !sub_clusters.contains(&nested_id) {
+                    sub_clusters.push(nested_id);
+                }
                 continue;
             }
 
@@ -324,6 +340,7 @@ impl<'a> Parser<'a> {
             id: cluster_id,
             label,
             children,
+            sub_clusters,
             provider,
             cluster_type,
             icon_svg: None,
@@ -763,6 +780,96 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("Invalid cluster type"));
+    }
+
+    // ─── Nested clusters ───
+
+    #[test]
+    fn test_nested_cluster() {
+        let dsl = r#"
+cluster Outer {
+  cluster Inner {
+    A
+    B
+  }
+  C
+}
+A >> B >> C
+"#;
+        let ir = parse_dsl(dsl).unwrap();
+        assert_eq!(ir.clusters.len(), 2);
+        // Inner cluster is parsed first
+        assert_eq!(ir.clusters[0].id, "inner");
+        assert_eq!(ir.clusters[0].children, vec!["a", "b"]);
+        assert!(ir.clusters[0].sub_clusters.is_empty());
+        // Outer cluster references Inner as sub_cluster
+        assert_eq!(ir.clusters[1].id, "outer");
+        assert_eq!(ir.clusters[1].children, vec!["c"]);
+        assert_eq!(ir.clusters[1].sub_clusters, vec!["inner"]);
+    }
+
+    #[test]
+    fn test_deeply_nested_cluster() {
+        let dsl = r#"
+cluster L1 {
+  cluster L2 {
+    cluster L3 {
+      Deep Node
+    }
+  }
+}
+Deep Node >> Other
+"#;
+        let ir = parse_dsl(dsl).unwrap();
+        assert_eq!(ir.clusters.len(), 3);
+        assert_eq!(ir.clusters[0].id, "l3");
+        assert_eq!(ir.clusters[0].children, vec!["deep_node"]);
+        assert_eq!(ir.clusters[1].id, "l2");
+        assert_eq!(ir.clusters[1].sub_clusters, vec!["l3"]);
+        assert_eq!(ir.clusters[2].id, "l1");
+        assert_eq!(ir.clusters[2].sub_clusters, vec!["l2"]);
+    }
+
+    #[test]
+    fn test_nested_cluster_with_edges() {
+        let dsl = r#"
+cluster WAS ZONE {
+  cluster 공통 인프라 {
+    KeyCloak
+    Redis
+  }
+  API >> DB
+}
+"#;
+        let ir = parse_dsl(dsl).unwrap();
+        assert_eq!(ir.clusters.len(), 2);
+        assert_eq!(ir.clusters[0].id, "공통_인프라");
+        assert_eq!(ir.clusters[0].children, vec!["keycloak", "redis"]);
+        assert_eq!(ir.clusters[1].id, "was_zone");
+        assert_eq!(ir.clusters[1].children, vec!["api", "db"]);
+        assert_eq!(ir.clusters[1].sub_clusters, vec!["공통_인프라"]);
+        assert_eq!(ir.edges.len(), 1);
+    }
+
+    #[test]
+    fn test_sibling_nested_clusters() {
+        let dsl = r#"
+cluster Parent {
+  cluster Child A {
+    Node 1
+  }
+  cluster Child B {
+    Node 2
+  }
+}
+Node 1 >> Node 2
+"#;
+        let ir = parse_dsl(dsl).unwrap();
+        assert_eq!(ir.clusters.len(), 3);
+        assert_eq!(ir.clusters[0].id, "child_a");
+        assert_eq!(ir.clusters[1].id, "child_b");
+        assert_eq!(ir.clusters[2].id, "parent");
+        assert_eq!(ir.clusters[2].sub_clusters, vec!["child_a", "child_b"]);
     }
 
     // ─── Error cases ───

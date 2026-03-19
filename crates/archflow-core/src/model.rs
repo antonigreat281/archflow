@@ -113,6 +113,9 @@ pub struct ClusterDef {
     pub id: String,
     pub label: String,
     pub children: Vec<String>,
+    /// IDs of child clusters nested inside this cluster
+    #[serde(default)]
+    pub sub_clusters: Vec<String>,
     /// Provider name (e.g., "aws", "gcp") for provider-aware styling
     #[serde(default)]
     pub provider: Option<String>,

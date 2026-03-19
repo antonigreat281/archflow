@@ -66,7 +66,21 @@ pub fn build_scene(layout: &LayoutResult, ir: &DiagramIR, theme: &Theme) -> Scen
     let mut elements = Vec::new();
 
     // Render clusters (behind nodes)
-    for (ci, lc) in layout.clusters.iter().enumerate() {
+    // Render in reverse order so parent clusters (added last in IR) draw first (behind children)
+    let cluster_render_order: Vec<usize> = {
+        let mut indices: Vec<usize> = (0..layout.clusters.len()).collect();
+        // Sort by area descending — larger (parent) clusters render first
+        indices.sort_by(|&a, &b| {
+            let area_a = layout.clusters[a].width * layout.clusters[a].height;
+            let area_b = layout.clusters[b].width * layout.clusters[b].height;
+            area_b
+                .partial_cmp(&area_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        indices
+    };
+    for ci in cluster_render_order {
+        let lc = &layout.clusters[ci];
         let cluster_def = ir.clusters.iter().find(|c| c.id == lc.id);
         let style = theme.resolve_cluster_style(&cluster_def.and_then(|c| c.style.clone()), ci);
         let label = cluster_def.map(|c| c.label.as_str()).unwrap_or(&lc.id);

@@ -255,48 +255,51 @@ pub fn compute_layout(ir: &DiagramIR) -> Result<LayoutResult, ArchflowError> {
         })
         .collect();
 
-    // Build layout clusters (bounding box of children)
-    let mut layout_clusters: Vec<LayoutCluster> = ir
-        .clusters
-        .iter()
-        .map(|c| {
-            let child_nodes: Vec<(f64, f64, f64)> = c
-                .children
-                .iter()
-                .filter_map(|cid| {
-                    let pos = node_positions.get(cid.as_str()).copied()?;
-                    let h = node_height_map.get(cid.as_str()).copied().unwrap_or(node_h);
-                    Some((pos.0, pos.1, h))
-                })
-                .collect();
+    // Build layout clusters (bounding box of children + sub-clusters)
+    // Process in IR order: inner clusters appear before their parents,
+    // so we can look up already-computed sub-cluster bounds.
+    let mut cluster_bounds: HashMap<String, (f64, f64, f64, f64)> = HashMap::new();
+    let mut layout_clusters: Vec<LayoutCluster> = Vec::new();
 
-            if child_nodes.is_empty() {
-                return LayoutCluster {
-                    id: c.id.clone(),
-                    x: 0.0,
-                    y: 0.0,
-                    width: node_w + CLUSTER_PADDING * 2.0,
-                    height: node_h + CLUSTER_PADDING * 2.0 + CLUSTER_LABEL_HEIGHT,
-                };
+    for c in &ir.clusters {
+        let mut min_x = f64::INFINITY;
+        let mut min_y = f64::INFINITY;
+        let mut max_x = f64::NEG_INFINITY;
+        let mut max_y = f64::NEG_INFINITY;
+        let mut has_content = false;
+
+        // Include direct child nodes
+        for cid in &c.children {
+            if let Some(&(px, py)) = node_positions.get(cid.as_str()) {
+                let h = node_height_map.get(cid.as_str()).copied().unwrap_or(node_h);
+                min_x = min_x.min(px);
+                min_y = min_y.min(py);
+                max_x = max_x.max(px + node_w);
+                max_y = max_y.max(py + h);
+                has_content = true;
             }
+        }
 
-            let min_x = child_nodes
-                .iter()
-                .map(|p| p.0)
-                .fold(f64::INFINITY, f64::min);
-            let min_y = child_nodes
-                .iter()
-                .map(|p| p.1)
-                .fold(f64::INFINITY, f64::min);
-            let max_x = child_nodes
-                .iter()
-                .map(|p| p.0 + node_w)
-                .fold(f64::NEG_INFINITY, f64::max);
-            let max_y = child_nodes
-                .iter()
-                .map(|p| p.1 + p.2) // use per-node height
-                .fold(f64::NEG_INFINITY, f64::max);
+        // Include sub-cluster bounds
+        for sub_id in &c.sub_clusters {
+            if let Some(&(sx, sy, sw, sh)) = cluster_bounds.get(sub_id) {
+                min_x = min_x.min(sx);
+                min_y = min_y.min(sy);
+                max_x = max_x.max(sx + sw);
+                max_y = max_y.max(sy + sh);
+                has_content = true;
+            }
+        }
 
+        let lc = if !has_content {
+            LayoutCluster {
+                id: c.id.clone(),
+                x: 0.0,
+                y: 0.0,
+                width: node_w + CLUSTER_PADDING * 2.0,
+                height: node_h + CLUSTER_PADDING * 2.0 + CLUSTER_LABEL_HEIGHT,
+            }
+        } else {
             LayoutCluster {
                 id: c.id.clone(),
                 x: min_x - CLUSTER_PADDING,
@@ -304,8 +307,11 @@ pub fn compute_layout(ir: &DiagramIR) -> Result<LayoutResult, ArchflowError> {
                 width: (max_x - min_x) + CLUSTER_PADDING * 2.0,
                 height: (max_y - min_y) + CLUSTER_PADDING * 2.0 + CLUSTER_LABEL_HEIGHT,
             }
-        })
-        .collect();
+        };
+
+        cluster_bounds.insert(c.id.clone(), (lc.x, lc.y, lc.width, lc.height));
+        layout_clusters.push(lc);
+    }
 
     // Find minimum coordinates (clusters can go negative due to padding/label)
     let min_x = layout_nodes
