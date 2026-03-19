@@ -504,13 +504,13 @@ fn extract_bracket_label(part: &str) -> (&str, Option<&str>) {
     (trimmed, None)
 }
 
-/// Convert label to a lowercase ID: "Web Server" → "web_server"
+/// Convert label to a lowercase ID: "Web Server" → "web_server", "웹 서버" → "웹_서버"
 fn to_id(label: &str) -> String {
     label
         .trim()
         .to_lowercase()
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .map(|c| if c.is_alphanumeric() { c } else { '_' })
         .collect::<String>()
         .split('_')
         .filter(|s| !s.is_empty())
@@ -520,7 +520,10 @@ fn to_id(label: &str) -> String {
 
 /// Case-insensitive prefix strip: "Title: foo" with prefix "title:" → Some(" foo")
 fn strip_prefix_ci<'b>(s: &'b str, prefix: &str) -> Option<&'b str> {
-    if s.len() >= prefix.len() && s[..prefix.len()].eq_ignore_ascii_case(prefix) {
+    if s.is_char_boundary(prefix.len())
+        && s.len() >= prefix.len()
+        && s[..prefix.len()].eq_ignore_ascii_case(prefix)
+    {
         Some(&s[prefix.len()..])
     } else {
         None
@@ -778,6 +781,37 @@ mod tests {
         assert_eq!(to_id("API Gateway"), "api_gateway");
         assert_eq!(to_id("  Trimmed  "), "trimmed");
         assert_eq!(to_id("node-with-dashes"), "node_with_dashes");
+    }
+
+    #[test]
+    fn test_to_id_unicode() {
+        assert_eq!(to_id("웹 서버"), "웹_서버");
+        assert_eq!(to_id("データベース"), "データベース");
+        assert_eq!(to_id("Web 서버"), "web_서버");
+        assert_eq!(to_id("Ünïcödé Nödé"), "ünïcödé_nödé");
+    }
+
+    #[test]
+    fn test_unicode_nodes() {
+        let ir = parse_dsl("웹 서버 >> 데이터베이스").unwrap();
+        assert_eq!(ir.nodes.len(), 2);
+        assert_eq!(ir.nodes[0].label, "웹 서버");
+        assert_eq!(ir.nodes[0].id, "웹_서버");
+        assert_eq!(ir.nodes[1].label, "데이터베이스");
+        assert_eq!(ir.nodes[1].id, "데이터베이스");
+    }
+
+    #[test]
+    fn test_unicode_cluster() {
+        let ir = parse_dsl("cluster 프로덕션 {\n  서버\n  DB\n}\n서버 >> DB").unwrap();
+        assert_eq!(ir.clusters[0].label, "프로덕션");
+        assert_eq!(ir.clusters[0].id, "프로덕션");
+    }
+
+    #[test]
+    fn test_unicode_title() {
+        let ir = parse_dsl("title: 아키텍처 다이어그램\nA >> B").unwrap();
+        assert_eq!(ir.metadata.title, Some("아키텍처 다이어그램".to_string()));
     }
 
     #[test]
