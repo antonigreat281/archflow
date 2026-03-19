@@ -1,0 +1,21 @@
+# Archflow
+
+Architecture diagrams as code. Define infrastructure visually using a simple DSL, powered by Rust and WebAssembly.
+
+## Features
+
+- **Simple DSL** — Describe architectures in plain text
+- **Multi-Cloud Icons** — AWS, Azure, GCP, Kubernetes built-in
+- **Rust-Powered** — Fast rendering via WebAssembly
+- **Nested Clusters** — Group and organize components hierarchically
+- **Unicode Support** — Labels in any language
+
+## Quick Example
+
+```
+title: Web Architecture
+direction: LR
+use aws
+
+aws:elb Load Balancer >> aws:ec2 Web Server >> aws:rds Database
+```

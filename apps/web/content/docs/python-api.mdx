@@ -1,0 +1,66 @@
+# Python API
+
+## Installation
+
+```bash
+pip install archflow
+```
+
+## Quick Start
+
+```python
+from archflow import Diagram, Node, Cluster
+
+with Diagram("Web Service", direction="LR") as d:
+    with Cluster("vpc", "AWS VPC"):
+        web = Node("web", "Web Server")
+        app = Node("app", "App Server")
+        db  = Node("db", "Database")
+    web >> app >> db
+    d.save_svg("output.svg")
+```
+
+## API Reference
+
+### Diagram
+
+```python
+Diagram(title, direction="TB", theme="default")
+```
+
+- `title` — Diagram title
+- `direction` — `"TB"` (top-bottom) or `"LR"` (left-right)
+- `theme` — Theme name: `"default"`, `"dark"`, `"ocean"`, `"sunset"`
+
+### Node
+
+```python
+Node(id, label, provider=None, icon=None)
+```
+
+- `id` — Unique identifier
+- `label` — Display label
+- `provider` — Provider name (e.g., `"aws"`)
+- `icon` — Icon identifier (e.g., `"ec2"`)
+
+### Cluster
+
+```python
+Cluster(id, label, provider=None, cluster_type=None)
+```
+
+Use as a context manager to group nodes:
+
+```python
+with Cluster("backend", "Backend Services"):
+    api = Node("api", "API")
+    db = Node("db", "Database")
+```
+
+### Edges
+
+Connect nodes with `>>`:
+
+```python
+node_a >> node_b >> node_c
+```

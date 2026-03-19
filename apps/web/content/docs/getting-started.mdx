@@ -1,0 +1,24 @@
+# Getting Started
+
+## Installation
+
+```bash
+cargo install archflow-cli
+```
+
+## Your First Diagram
+
+Create a file called `hello.archflow`:
+
+```
+title: Hello Archflow
+direction: LR
+
+Client >> API Server >> Database
+```
+
+Then render it:
+
+```bash
+archflow render hello.archflow -o hello.svg
+```

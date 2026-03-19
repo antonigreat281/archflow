@@ -1,0 +1,47 @@
+# Architecture
+
+Archflow is designed as a language-neutral rendering engine. Any language that produces the JSON IR can generate diagrams.
+
+## Pipeline
+
+```
+Python DSL / TS DSL / Any Language
+          |
+     Diagram IR (JSON)
+          |
+      Rust Core Engine
+   +------+------+
+   |      |      |
+Layout  Theme  Scene Graph
+          |
+      Renderer
+   +------+------+------+
+   |      |      |      |
+  SVG    PNG    CLI    WASM
+                        |
+                    React / Web
+```
+
+## Components
+
+### Archflow Core (`archflow-core`)
+
+The Rust core library handles:
+
+- **DSL Parser** — Parses `.archflow` files into `DiagramIR`
+- **Layout Engine** — Topological sort + rank-based positioning
+- **Theme System** — Built-in themes with customization
+- **Scene Builder** — Converts layout to renderable scene graph
+- **SVG Renderer** — Produces clean SVG output
+- **Icon Resolver** — Fetches and embeds provider icons
+
+### Bindings
+
+- **WASM** (`archflow-wasm`) — Browser rendering via WebAssembly
+- **Python FFI** (`archflow-ffi`) — Native Python bindings
+- **CLI** (`archflow-cli`) — Command-line tool
+
+### Apps
+
+- **VS Code Extension** (`apps/vscode`) — Syntax highlighting, diagnostics, and preview
+- **Web** (`apps/web`) — Documentation and playground

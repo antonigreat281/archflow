@@ -29,15 +29,35 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build WASM
-        run: wasm-pack build bindings/wasm --target web --out-dir ../../docs/pkg
+        run: wasm-pack build bindings/wasm --target web --out-dir ../../apps/web/public/wasm
 
-      - name: Remove gitignore from pkg
-        run: rm -f docs/pkg/.gitignore
+      - name: Remove gitignore from wasm output
+        run: rm -f apps/web/public/wasm/.gitignore
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install
+        working-directory: apps/web
+
+      - name: Build Next.js
+        run: pnpm build
+        working-directory: apps/web
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: apps/web/out
 
   deploy:
     needs: build

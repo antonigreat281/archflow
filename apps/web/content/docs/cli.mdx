@@ -1,0 +1,38 @@
+# CLI
+
+## Installation
+
+```bash
+cargo install archflow-cli
+```
+
+## Commands
+
+### Render
+
+Convert an `.archflow` file to SVG:
+
+```bash
+archflow render input.archflow -o output.svg
+```
+
+Options:
+- `-o, --output` — Output file path (default: stdout)
+- `--theme` — Override theme (default, dark, ocean, sunset)
+- `--direction` — Override direction (TB, LR)
+
+### Parse
+
+Parse DSL to JSON IR:
+
+```bash
+archflow parse input.archflow
+```
+
+### Validate
+
+Check syntax without rendering:
+
+```bash
+archflow validate input.archflow
+```

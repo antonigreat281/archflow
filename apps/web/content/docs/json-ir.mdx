@@ -1,0 +1,67 @@
+# JSON IR Schema
+
+The JSON Intermediate Representation (IR) is the core contract between any DSL and the rendering engine. Any language that can produce this JSON can generate diagrams.
+
+## Schema
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `version` | string | Yes | Schema version (`"1.0.0"`) |
+| `metadata.title` | string | No | Diagram title |
+| `metadata.direction` | string | No | `"TB"` (top-bottom) or `"LR"` (left-right) |
+| `metadata.theme` | string | No | Theme name (default: `"default"`) |
+| `nodes[]` | array | Yes | List of node definitions |
+| `nodes[].id` | string | Yes | Unique node identifier |
+| `nodes[].label` | string | Yes | Display label |
+| `nodes[].provider` | string | No | Provider name (e.g., `"aws"`) |
+| `nodes[].icon` | string | No | Icon identifier (e.g., `"ec2"`) |
+| `edges[]` | array | Yes | List of edge definitions |
+| `edges[].from` | string | Yes | Source node ID |
+| `edges[].to` | string | Yes | Target node ID |
+| `edges[].label` | string | No | Edge label text |
+| `clusters[]` | array | No | List of cluster definitions |
+| `clusters[].id` | string | Yes | Unique cluster identifier |
+| `clusters[].label` | string | Yes | Display label |
+| `clusters[].children` | string[] | Yes | List of child node IDs |
+| `clusters[].sub_clusters` | string[] | No | List of child cluster IDs |
+
+## Style Overrides
+
+Any node, edge, or cluster can include an optional `style` object:
+
+```json
+{
+  "style": {
+    "fill": "#FF6B6B",
+    "stroke": "#C92A2A",
+    "stroke_width": 2,
+    "stroke_dasharray": "5,5",
+    "corner_radius": 8,
+    "font_size": 14,
+    "font_color": "#FFFFFF"
+  }
+}
+```
+
+## Example
+
+```json
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Web Service",
+    "direction": "LR",
+    "theme": "default"
+  },
+  "nodes": [
+    { "id": "web", "label": "Web Server" },
+    { "id": "db", "label": "Database" }
+  ],
+  "edges": [
+    { "from": "web", "to": "db", "label": "SQL" }
+  ],
+  "clusters": [
+    { "id": "vpc", "label": "VPC", "children": ["web", "db"] }
+  ]
+}
+```

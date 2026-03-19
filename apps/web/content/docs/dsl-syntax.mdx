@@ -1,0 +1,86 @@
+# DSL Syntax
+
+## Basic Structure
+
+```
+title: My Diagram
+direction: TB    # TB (top-bottom) or LR (left-right)
+theme: default   # default, dark, ocean, sunset
+```
+
+## Nodes and Edges
+
+Connect nodes with `>>`:
+
+```
+Node A >> Node B >> Node C
+```
+
+Add edge labels with brackets:
+
+```
+API >> Database [SQL queries]
+```
+
+## Provider Icons
+
+Declare a provider with `use`, then prefix nodes:
+
+```
+use aws
+
+aws:ec2 Web Server >> aws:rds Database
+```
+
+Available providers: `aws`, `azure`, `gcp`, `k8s`
+
+## Clusters
+
+Group nodes into clusters:
+
+```
+cluster Backend {
+  API Server
+  Database
+}
+```
+
+### Nested Clusters
+
+Clusters can be nested:
+
+```
+cluster Production {
+  cluster Frontend {
+    Web App
+    CDN
+  }
+  cluster Backend {
+    API >> Database
+  }
+}
+```
+
+### Provider Clusters
+
+```
+cluster:aws:vpc Production VPC {
+  aws:ec2 Web Server
+  aws:rds Database
+}
+```
+
+## Comments
+
+```
+# This is a comment
+// This is also a comment
+```
+
+## Layout Options
+
+```
+icon_size: 64
+node_width: 200
+spacing: 100
+```
